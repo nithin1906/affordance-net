@@ -4,7 +4,7 @@ import CanvasOverlay from "./components/CanvasOverlay";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Camera, Upload, X, Zap, ScanLine, Aperture, Activity, 
-  Sliders, Download, History, ChevronRight, Target, RefreshCw, Trash2 
+  Sliders, Download, History, ChevronRight, Target, RefreshCw, Trash2, Menu 
 } from "lucide-react";
 
 export default function App() {
@@ -18,7 +18,7 @@ export default function App() {
   
   const [minConfidence, setMinConfidence] = useState(15); 
   const [scanHistory, setScanHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(true);
+  const [showHistory, setShowHistory] = useState(false); // Default closed on mobile
   const [activeIdx, setActiveIdx] = useState(null);
   const [imgSize, setImgSize] = useState({ width: 1280, height: 720 }); 
 
@@ -30,7 +30,10 @@ export default function App() {
     setActiveIdx(null);
     
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+      // Mobile optimization: 'environment' faces back camera
+      const s = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+      });
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = s;
@@ -72,8 +75,6 @@ export default function App() {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       
-      // --- FIX 1: Set Preview IMMEDIATELY ---
-      // This ensures the image is visible while the scanner runs
       setPreviewSrc(url);
       stopCamera(); 
       
@@ -118,8 +119,7 @@ export default function App() {
       affordances: obj.affordances ?? {}
     }));
 
-    // previewSrc is already set in captureAndInfer, but we set it again here for uploads
-    setPreviewSrc(imgUrl); 
+    setPreviewSrc(imgUrl);
     setDetections(objects);
     setIsProcessing(false);
     setStatus(`Analysis Complete: ${objects.length} Targets`);
@@ -140,6 +140,7 @@ export default function App() {
     setDetections(item.detections || []); 
     setActiveIdx(null);
     setStatus(`Reviewing Archive: ${item.count} Targets`);
+    setShowHistory(false); // Close drawer on mobile selection
   }
 
   function deleteHistoryItem(e, id) {
@@ -162,34 +163,26 @@ export default function App() {
     });
   };
 
-  useEffect(() => {
-    if (previewRef.current) {
-      previewRef.current.width = previewRef.current.clientWidth;
-      previewRef.current.height = previewRef.current.clientHeight;
-    }
-  }, [previewSrc]);
-
   return (
-    <div className="min-h-screen text-slate-200 font-sans selection:bg-indigo-500/30 relative">
+    <div className="fixed inset-0 bg-[#050911] text-slate-200 font-sans selection:bg-indigo-500/30 overflow-hidden flex flex-col">
       <div className="cyber-grid-bg" /> 
 
       {/* --- Navbar --- */}
-      <nav className="border-b border-white/5 bg-[#050911]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-8xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-lg shadow-lg shadow-indigo-500/20">
-              <ScanLine size={20} className="text-white" />
+      <nav className="border-b border-white/5 bg-[#050911]/90 backdrop-blur-md z-50 shrink-0">
+        <div className="max-w-8xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-lg shadow-lg shadow-indigo-500/20">
+              <ScanLine size={18} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-white leading-none">Affordance<span className="text-indigo-400">Net</span></h1>
-              <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Pro Workstation</span>
+              <h1 className="text-base font-bold tracking-tight text-white leading-none">Affordance<span className="text-indigo-400">Net</span></h1>
             </div>
           </div>
           
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/5">
-              <Activity size={14} className={isProcessing ? "text-emerald-400 animate-pulse" : "text-slate-600"} />
-              <span className="text-xs font-mono text-indigo-200">{status}</span>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+              <Activity size={12} className={isProcessing ? "text-emerald-400 animate-pulse" : "text-slate-600"} />
+              <span className="text-[10px] font-mono text-indigo-200">{status}</span>
             </div>
             <button 
               onClick={() => setShowHistory(!showHistory)}
@@ -201,14 +194,22 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="max-w-8xl mx-auto p-6 flex flex-col lg:flex-row gap-6 h-[calc(100vh-80px)]">
+      {/* --- Main Content (Scrollable Container) --- */}
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         
-        {/* --- LEFT COLUMN: Viewport --- */}
-        <div className="flex-1 flex flex-col gap-4 min-w-0">
+        {/* --- LEFT COLUMN: Viewport (Flexible Height) --- */}
+        <div className="flex-1 flex flex-col min-h-0 relative lg:p-6 p-0">
           
-          <div className="flex-1 relative bg-[#0F131C] rounded-2xl overflow-hidden border border-white/10 shadow-2xl group">
-            <video ref={videoRef} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${streaming && !previewSrc ? 'opacity-100' : 'opacity-0'}`} />
+          <div className="flex-1 relative bg-[#0F131C] lg:rounded-2xl overflow-hidden border-b lg:border border-white/10 shadow-2xl group">
+            
+            {/* VIDEO */}
+            <video 
+              ref={videoRef} 
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${streaming && !previewSrc ? 'opacity-100' : 'opacity-0'}`} 
+              playsInline // Important for mobile browsers
+            />
 
+            {/* RESULT */}
             {previewSrc && (
               <div className="absolute inset-0 z-10 bg-[#0F131C]">
                 <img 
@@ -224,8 +225,9 @@ export default function App() {
               </div>
             )}
 
+            {/* EMPTY STATE */}
             {!streaming && !previewSrc && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-4">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-4 p-6 text-center">
                 <div className="p-4 rounded-full bg-white/5 border border-white/5">
                   <Aperture size={32} />
                 </div>
@@ -233,6 +235,7 @@ export default function App() {
               </div>
             )}
 
+            {/* LOADING */}
             {isProcessing && (
               <div className="absolute inset-0 z-20 bg-indigo-500/5 backdrop-blur-[2px]">
                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -246,62 +249,66 @@ export default function App() {
               </div>
             )}
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 p-2 bg-[#050911]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-30">
-              
-              {previewSrc ? (
-                <button 
-                  onClick={startCamera} 
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl font-semibold text-white transition shadow-lg shadow-emerald-500/20"
-                >
-                  <RefreshCw size={18} /> Scan Again
-                </button>
-              ) : 
-              !streaming ? (
-                <button onClick={startCamera} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-xl font-semibold text-white transition shadow-lg shadow-indigo-500/20">
-                  <Camera size={18} /> Activate Cam
-                </button>
-              ) : (
-                 <>
-                  <button onClick={captureAndInfer} disabled={isProcessing} className="bg-white text-black p-4 rounded-xl hover:scale-105 active:scale-95 transition shadow-lg disabled:opacity-50">
-                    <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
+            {/* CONTROL BAR (Floating Bottom) */}
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center z-30 px-4 pointer-events-none">
+              <div className="flex items-center gap-3 p-2 bg-[#050911]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl pointer-events-auto">
+                
+                {previewSrc ? (
+                  <button 
+                    onClick={startCamera} 
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl font-semibold text-white transition shadow-lg shadow-emerald-500/20 active:scale-95"
+                  >
+                    <RefreshCw size={18} /> <span className="hidden sm:inline">Scan Again</span>
                   </button>
-                  <button onClick={stopCamera} className="flex items-center gap-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-3 rounded-xl font-medium transition border border-red-500/20">
-                    <X size={18} />
+                ) : 
+                !streaming ? (
+                  <button onClick={startCamera} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-xl font-semibold text-white transition shadow-lg shadow-indigo-500/20 active:scale-95">
+                    <Camera size={18} /> Activate
                   </button>
-                 </>
-              )}
+                ) : (
+                   <>
+                    <button onClick={captureAndInfer} disabled={isProcessing} className="bg-white text-black w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-lg disabled:opacity-50">
+                      <div className="w-4 h-4 bg-red-600 rounded-full animate-pulse" />
+                    </button>
+                    <button onClick={stopCamera} className="w-12 h-12 flex items-center justify-center bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl font-medium transition border border-red-500/20 active:scale-95">
+                      <X size={20} />
+                    </button>
+                   </>
+                )}
 
-              <div className="w-px h-8 bg-white/10 mx-1" />
-              
-              <label className="cursor-pointer p-3 hover:bg-white/10 rounded-xl transition text-slate-400 hover:text-white">
-                <Upload size={20} />
-                <input type="file" accept="image/*" onChange={onUpload} className="hidden" />
-              </label>
+                <div className="w-px h-8 bg-white/10 mx-1" />
+                
+                <label className="cursor-pointer p-3 hover:bg-white/10 rounded-xl transition text-slate-400 hover:text-white active:bg-white/20">
+                  <Upload size={20} />
+                  <input type="file" accept="image/*" onChange={onUpload} className="hidden" />
+                </label>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* --- RIGHT COLUMN: Analysis & History --- */}
-        <div className="w-full lg:w-96 flex flex-col gap-4">
+        {/* --- RIGHT COLUMN: Analysis (Slide-up on mobile? No, stacked) --- */}
+        {/* On mobile, this div sits below the image. On Desktop, side. */}
+        <div className="w-full lg:w-96 flex flex-col gap-4 p-4 lg:p-6 lg:pl-0 h-[40vh] lg:h-auto border-t lg:border-t-0 border-white/10 bg-[#0B0F17] lg:bg-transparent z-10">
           
-          <div className="bg-[#0F131C] rounded-2xl border border-white/10 p-5 flex-1 overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <Zap size={16} className="text-indigo-400" /> Analysis Data
+          <div className="bg-[#0F131C] rounded-2xl border border-white/10 p-5 flex-1 overflow-hidden flex flex-col shadow-xl">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Zap size={14} className="text-indigo-400" /> Data
               </h3>
               {detections.length > 0 && (
                 <button onClick={downloadJSON} className="text-xs flex items-center gap-1 text-slate-400 hover:text-white transition">
-                  <Download size={12} /> Export
+                  <Download size={12} /> Save
                 </button>
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
               <AnimatePresence mode="popLayout">
                 {detections.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-600 text-sm opacity-50">
-                    <Activity size={32} className="mb-2" />
-                    No Active Signatures
+                    <Activity size={24} className="mb-2" />
+                    <span className="text-xs">Awaiting Input</span>
                   </div>
                 ) : (
                   detections.map((d, i) => (
@@ -314,10 +321,10 @@ export default function App() {
                           : "bg-[#131722] border-white/5 hover:border-indigo-500/30"
                       }`}
                     >
-                      <div className="flex justify-between items-start mb-3">
+                      <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                          {activeIdx === i && <Target size={14} className="text-emerald-400 animate-pulse" />}
-                          <span className={`font-bold capitalize ${activeIdx === i ? "text-emerald-300" : "text-slate-100"}`}>
+                          {activeIdx === i && <Target size={12} className="text-emerald-400 animate-pulse" />}
+                          <span className={`text-sm font-bold capitalize ${activeIdx === i ? "text-emerald-300" : "text-slate-100"}`}>
                             {d.label}
                           </span>
                         </div>
@@ -326,15 +333,15 @@ export default function App() {
                         </span>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                          {d.affordances && Object.keys(d.affordances).length > 0 ? (
                            Object.entries(d.affordances)
                             .filter(([k, v]) => v > (minConfidence / 100)) 
                             .sort((a, b) => b[1] - a[1])
                             .map(([k, v]) => (
-                              <div key={k} className="text-xs">
-                                <div className="flex justify-between mb-1">
-                                  <span className={v > 0.5 ? "text-white" : "text-slate-400"}>{k}</span>
+                              <div key={k} className="text-[10px] sm:text-xs">
+                                <div className="flex justify-between mb-0.5">
+                                  <span className={v > 0.5 ? "text-slate-200" : "text-slate-400"}>{k}</span>
                                   <span className="font-mono text-slate-500">{Math.round(v * 100)}%</span>
                                 </div>
                                 <div className="h-1 bg-black rounded-full overflow-hidden">
@@ -347,7 +354,7 @@ export default function App() {
                               </div>
                             ))
                          ) : (
-                           <div className="text-[10px] text-slate-600 italic p-2 text-center">No affordances found above threshold</div>
+                           <div className="text-[10px] text-slate-600 italic p-1 text-center">Low confidence data</div>
                          )}
                       </div>
                     </motion.div>
@@ -355,59 +362,63 @@ export default function App() {
                 )}
               </AnimatePresence>
             </div>
-
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <div className="flex justify-between text-xs text-slate-400 mb-2">
-                <span className="flex items-center gap-1"><Sliders size={12} /> Confidence Threshold</span>
-                <span className="font-mono text-indigo-400">{minConfidence}%</span>
-              </div>
-              <input 
-                type="range" min="0" max="100" value={minConfidence} 
-                onChange={(e) => setMinConfidence(e.target.value)}
-                className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer"
-              />
-            </div>
           </div>
+        </div>
 
+        {/* --- History DRAWER (Mobile Friendly) --- */}
+        <AnimatePresence>
           {showHistory && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-              className="bg-[#0F131C] rounded-2xl border border-white/10 p-4 max-h-48 overflow-y-auto custom-scrollbar"
-            >
-              <h4 className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
-                <History size={12} /> Session History
-              </h4>
-              <div className="space-y-2">
-                {scanHistory.length === 0 ? (
-                  <div className="text-xs text-slate-700 italic text-center py-4">No recent scans</div>
-                ) : (
-                  scanHistory.map((item) => (
-                    <div 
-                      key={item.id} 
-                      onClick={() => loadHistoryItem(item)}
-                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition text-left group cursor-pointer relative"
-                    >
-                      <img src={item.img} alt="scan" className="w-10 h-10 rounded object-cover bg-black border border-white/5 group-hover:border-indigo-500/50 transition" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-slate-300">{item.count} Objects Found</div>
-                        <div className="text-[10px] text-slate-600">{item.date}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
+            <>
+              {/* Backdrop for mobile */}
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setShowHistory(false)}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              />
+              
+              {/* The Drawer Itself */}
+              <motion.div 
+                initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="absolute top-0 right-0 bottom-0 w-72 bg-[#050911] border-l border-white/10 z-50 shadow-2xl flex flex-col"
+              >
+                <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#050911]">
+                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                      <History size={14} /> Session History
+                   </h4>
+                   <button onClick={() => setShowHistory(false)} className="text-slate-500 hover:text-white"><X size={18} /></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                  {scanHistory.length === 0 ? (
+                    <div className="text-xs text-slate-700 italic text-center py-10">No recent scans</div>
+                  ) : (
+                    scanHistory.map((item) => (
+                      <div 
+                        key={item.id} 
+                        onClick={() => loadHistoryItem(item)}
+                        className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition text-left group cursor-pointer relative border border-transparent hover:border-white/5"
+                      >
+                        <img src={item.img} alt="scan" className="w-10 h-10 rounded object-cover bg-black border border-white/5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-slate-300">{item.count} Objects</div>
+                          <div className="text-[10px] text-slate-600">{item.date}</div>
+                        </div>
                         <button 
                           onClick={(e) => deleteHistoryItem(e, item.id)}
-                          className="p-1.5 rounded-md text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition opacity-0 group-hover:opacity-100"
+                          className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded transition"
                         >
                           <Trash2 size={14} />
                         </button>
-                        <ChevronRight size={12} className="text-slate-700 group-hover:text-white transition" />
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            </>
           )}
-        </div>
+        </AnimatePresence>
+
       </main>
     </div>
   );
