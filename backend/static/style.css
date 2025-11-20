@@ -1,0 +1,61 @@
+body {
+  margin: 0;
+  background: radial-gradient(circle at top left, #061a30, #000814);
+  color: #fff;
+  font-family: 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+header {
+  text-align: center;
+  padding: 10px 0;
+  background: linear-gradient(90deg, #082644, #0a1630);
+  width: 100%;
+}
+main {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  max-width: 1200px;
+}
+.viewer {
+  background: #0a1a2f;
+  border-radius: 12px;
+  padding: 10px;
+}
+#canvas {
+  width: 640px;
+  height: 480px;
+  border-radius: 8px;
+  background: black;
+}
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+aside {
+  background: #081626;
+  padding: 15px;
+  border-radius: 12px;
+  flex: 1;
+}
+pre {
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+button {
+  background: #0059ff;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+button:hover {
+  background: #0042c7;
+}

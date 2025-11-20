@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Affordance Detection</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script defer src="/static/main.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Affordance Detection Demo</h1>
+    <p>Real-time object + action prediction</p>
+  </header>
+
+  <main>
+    <section class="viewer">
+      <canvas id="canvas"></canvas>
+      <video id="video" playsinline autoplay muted></video>
+      <div class="controls">
+        <button id="startCam">🎥 Start Camera</button>
+        <button id="stopCam">⏹ Stop</button>
+        <input type="file" id="fileInput" accept="image/*">
+        <span id="status">Status: idle</span>
+      </div>
+    </section>
+
+    <aside>
+      <h3>Console</h3>
+      <pre id="console"></pre>
+      <div class="settings">
+        <label>Confidence <input id="conf" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>

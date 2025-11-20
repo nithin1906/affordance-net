@@ -1,0 +1,25 @@
+# --- Dependencies & Environments ---
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+
+# --- Massive Data (DO NOT UPLOAD) ---
+COCO_SOURCE/
+affordance_dataset/
+affordance_crops/
+affordance_data.yaml
+data.yaml
+
+# --- Training Logs & Large Models ---
+runs/
+backend/models/
+*.pt
+
+# --- Frontend Build ---
+frontend/dist/
+
+# --- System Files ---
+.DS_Store
+Thumbs.db
+.vscode/

@@ -1,0 +1,17 @@
+# Backend runtime
+fastapi>=0.95.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6
+pillow>=10.0.0
+numpy>=1.23
+scipy>=1.10
+# opencv: avoid exact pinned versions; choose >=4.11 so pip picks a compatible wheel
+opencv-python>=4.11.0
+scikit-learn>=1.3.0
+pandas>=2.0.0
+PyYAML>=6.0
+tqdm>=4.65
+# ultralytics (you already have 8.3.227 installed; allow >=8.3)
+ultralytics>=8.3.0
+# torch: do NOT pin here; you already installed GPU-compatible wheel separately
+# torchvision: same as torch; installed with the matching wheel
