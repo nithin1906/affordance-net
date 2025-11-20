@@ -1,0 +1,10 @@
+# .dockerignore
+.venv/
+node_modules/
+COCO_SOURCE/
+affordance_dataset/
+affordance_crops/
+runs/
+__pycache__/
+.git/
+.gitignore

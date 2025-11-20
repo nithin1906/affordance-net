@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # The "Brain"
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile  # <--- This line must be indented under 'build'
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend_models:/app/backend_models
+    # (The deploy section is optional, you can remove it if it causes issues)
+
+  # The "Face"
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
